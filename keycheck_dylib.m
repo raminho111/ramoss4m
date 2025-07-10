@@ -1,25 +1,25 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
-bool validateKey(NSString *key, NSString *hwid);
-void promptForKey(NSString *deviceID);
+bool validateKey(NSString *key);
+void promptForKey(void);
 
 static bool isPromptShowing = false;
 
 __attribute__((constructor))
 static void initialize() {
-    NSString *deviceID = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSString *savedKey = [defaults stringForKey:@"user_key"];
-    if (!savedKey || !validateKey(savedKey, deviceID)) {
+    if (!savedKey || !validateKey(savedKey)) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            promptForKey(deviceID);
+            promptForKey();
         });
     }
 }
 
-bool validateKey(NSString *key, NSString *hwid) {
-    NSString *urlString = [NSString stringWithFormat:@"https://keyauth.win/api/1.0/?name=ramoss4m%%20ios&ownerid=wBOrQJSMB8&version=1.0&type=verify&key=%@&hwid=%@", key, hwid];
+bool validateKey(NSString *key) {
+    // Apenas valida a key, sem HWID
+    NSString *urlString = [NSString stringWithFormat:@"https://keyauth.win/api/1.0/?name=ramoss4m%%20ios&ownerid=wBOrQJSMB8&version=1.0&type=verify&key=%@", key];
     NSURL *url = [NSURL URLWithString:urlString];
     NSURLRequest *request = [NSURLRequest requestWithURL:url];
     NSData *responseData = [NSURLConnection sendSynchronousRequest:request returningResponse:nil error:nil];
@@ -28,14 +28,13 @@ bool validateKey(NSString *key, NSString *hwid) {
     return [json[@"success"] boolValue];
 }
 
-void promptForKey(NSString *deviceID) {
+void promptForKey() {
     if (isPromptShowing) return;
     isPromptShowing = true;
 
     UIWindow *window = nil;
     UIViewController *rootVC = nil;
-    
-    // Tentar pegar a janela e rootViewController de forma segura
+
     if (@available(iOS 13.0, *)) {
         NSSet *scenes = [UIApplication.sharedApplication connectedScenes];
         for (UIScene *scene in scenes) {
@@ -55,12 +54,11 @@ void promptForKey(NSString *deviceID) {
         window = UIApplication.sharedApplication.keyWindow;
         rootVC = window.rootViewController;
     }
-    
+
     if (!rootVC) {
-        // Se não conseguir pegar o rootVC, tenta novamente depois de um tempo
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             isPromptShowing = false;
-            promptForKey(deviceID);
+            promptForKey();
         });
         return;
     }
@@ -74,14 +72,13 @@ void promptForKey(NSString *deviceID) {
 
     UIAlertAction *confirm = [UIAlertAction actionWithTitle:@"Verificar" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         NSString *inputKey = alert.textFields.firstObject.text;
-        if (validateKey(inputKey, deviceID)) {
+        if (validateKey(inputKey)) {
             [[NSUserDefaults standardUserDefaults] setObject:inputKey forKey:@"user_key"];
             [[NSUserDefaults standardUserDefaults] synchronize];
             isPromptShowing = false;
         } else {
-            // Se invalidar, mantém o alerta aparecendo
             isPromptShowing = false;
-            promptForKey(deviceID);
+            promptForKey();
         }
     }];
 
