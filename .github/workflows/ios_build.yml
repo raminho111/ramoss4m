@@ -24,7 +24,7 @@ jobs:
           keycheck_dylib.m -o libKeyCheck.dylib -dynamiclib
 
       - name: Upload compiled .dylib
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.3.1
         with:
           name: libKeyCheck
           path: libKeyCheck.dylib
