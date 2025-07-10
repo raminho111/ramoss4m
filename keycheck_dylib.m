@@ -26,7 +26,7 @@ bool validateKey(NSString *key, NSString *hwid) {
 }
 
 void promptForKey(NSString *deviceID) {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Acesso Restrito"
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"FFH4X FFMAX"
                                                                    message:@"Insira sua key para continuar."
                                                             preferredStyle:UIAlertControllerStyleAlert];
     [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
