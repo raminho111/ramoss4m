@@ -1,4 +1,3 @@
-
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
@@ -32,18 +31,53 @@ void promptForKey(NSString *deviceID) {
     [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
         textField.placeholder = @"Sua Key";
     }];
-    UIAlertAction *confirm = [UIAlertAction actionWithTitle:@"Verificar" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+
+    UIAlertAction *confirm = [UIAlertAction actionWithTitle:@"Verificar"
+                                                      style:UIAlertActionStyleDefault
+                                                    handler:^(UIAlertAction *action) {
         NSString *inputKey = alert.textFields.firstObject.text;
         if (validateKey(inputKey, deviceID)) {
             [[NSUserDefaults standardUserDefaults] setObject:inputKey forKey:@"user_key"];
             [[NSUserDefaults standardUserDefaults] synchronize];
         } else {
+            // Se a key for inválida, chama o prompt novamente
             promptForKey(deviceID);
         }
     }];
     [alert addAction:confirm];
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIWindow *window = UIApplication.sharedApplication.windows.firstObject;
-        [window.rootViewController presentViewController:alert animated:YES completion:nil];
+
+    UIWindow *window = nil;
+    if (@available(iOS 13.0, *)) {
+        NSSet *scenes = UIApplication.sharedApplication.connectedScenes;
+        for (UIScene *scene in scenes) {
+            if (scene.activationState == UISceneActivationStateForegroundActive && [scene isKindOfClass:[UIWindowScene class]]) {
+                UIWindowScene *windowScene = (UIWindowScene *)scene;
+                for (UIWindow *w in windowScene.windows) {
+                    if (w.isKeyWindow) {
+                        window = w;
+                        break;
+                    }
+                }
+            }
+            if (window) break;
+        }
+    } else {
+        window = UIApplication.sharedApplication.keyWindow;
+    }
+
+    if (window == nil) {
+        NSLog(@"[keyauth] Erro: não encontrou janela ativa para apresentar o login.");
+        return;
+    }
+
+    UIViewController *rootVC = window.rootViewController;
+    if (!rootVC) {
+        NSLog(@"[keyauth] Erro: rootViewController é nil.");
+        return;
+    }
+
+    // Delay para garantir que a UI esteja pronta para apresentar o alert
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [rootVC presentViewController:alert animated:YES completion:nil];
     });
 }
