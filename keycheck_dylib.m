@@ -10,17 +10,17 @@
 static bool isPromptShowing = false;
 
 bool isKeyValid(NSString *key) {
-    return [key isEqualToString:@VALID_KEY];
+    return [key isEqualToString:VALID_KEY];
 }
 
 bool isUUIDValid(void) {
     NSString *deviceUUID = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
-    return [deviceUUID isEqualToString:@CLIENT_UUID];
+    return [deviceUUID isEqualToString:CLIENT_UUID];
 }
 
 bool isDateValid(void) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSDate *activationDate = [defaults objectForKey:@STORED_DATE];
+    NSDate *activationDate = [defaults objectForKey:STORED_DATE];
     if (!activationDate) return false;
 
     NSTimeInterval timeSince = [[NSDate date] timeIntervalSinceDate:activationDate];
@@ -29,7 +29,7 @@ bool isDateValid(void) {
 
 void saveActivationDate(void) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    [defaults setObject:[NSDate date] forKey:@STORED_DATE];
+    [defaults setObject:[NSDate date] forKey:STORED_DATE];
     [defaults synchronize];
 }
 
@@ -38,7 +38,7 @@ void promptForKey(void);
 __attribute__((constructor))
 static void initialize() {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSString *savedKey = [defaults stringForKey:@STORED_KEY];
+    NSString *savedKey = [defaults stringForKey:STORED_KEY];
 
     if (!isUUIDValid() || !isKeyValid(savedKey) || !isDateValid()) {
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -90,7 +90,7 @@ void promptForKey() {
     UIAlertAction *confirm = [UIAlertAction actionWithTitle:@"Verificar" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         NSString *inputKey = alert.textFields.firstObject.text;
         if (isUUIDValid() && isKeyValid(inputKey)) {
-            [[NSUserDefaults standardUserDefaults] setObject:inputKey forKey:@STORED_KEY];
+            [[NSUserDefaults standardUserDefaults] setObject:inputKey forKey:STORED_KEY];
             saveActivationDate();
             [[NSUserDefaults standardUserDefaults] synchronize];
             isPromptShowing = false;
