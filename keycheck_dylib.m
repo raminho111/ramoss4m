@@ -1,36 +1,50 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
-bool validateKey(NSString *key, NSString *hwid);
-void promptForKey(void);
+#define STORED_KEY @"user_key"
+#define STORED_DATE @"activation_date"
+#define VALID_KEY @"LP08U-I63TL-TH9EJ-JBJY1-LYW99"
+#define MAX_DAYS 7
+#define CLIENT_UUID @"00008101-001E40A614C0001E"
 
 static bool isPromptShowing = false;
 
+bool isKeyValid(NSString *key) {
+    return [key isEqualToString:@VALID_KEY];
+}
+
+bool isUUIDValid(void) {
+    NSString *deviceUUID = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+    return [deviceUUID isEqualToString:@CLIENT_UUID];
+}
+
+bool isDateValid(void) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSDate *activationDate = [defaults objectForKey:@STORED_DATE];
+    if (!activationDate) return false;
+
+    NSTimeInterval timeSince = [[NSDate date] timeIntervalSinceDate:activationDate];
+    return timeSince <= (MAX_DAYS * 24 * 60 * 60);
+}
+
+void saveActivationDate(void) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    [defaults setObject:[NSDate date] forKey:@STORED_DATE];
+    [defaults synchronize];
+}
+
+void promptForKey(void);
+
 __attribute__((constructor))
 static void initialize() {
-    NSString *hwid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSString *savedKey = [defaults stringForKey:@"user_key"];
-    if (!savedKey || !validateKey(savedKey, hwid)) {
+    NSString *savedKey = [defaults stringForKey:@STORED_KEY];
+
+    if (!isUUIDValid() || !isKeyValid(savedKey) || !isDateValid()) {
         dispatch_async(dispatch_get_main_queue(), ^{
             promptForKey();
         });
     }
-}
-
-bool validateKey(NSString *key, NSString *hwid) {
-    // Construir URL da API Auth.gg com os parâmetros necessários
-    NSString *urlString = [NSString stringWithFormat:
-        @"https://auth.gg/api/1.0/?type=verify&aid=625185&secret=7cHD2NsVsKQmSNfDd9b9GnvqUYg3olmzUn3&key=%@&hwid=%@",
-        key, hwid];
-    NSURL *url = [NSURL URLWithString:urlString];
-    NSURLRequest *request = [NSURLRequest requestWithURL:url];
-    
-    NSData *responseData = [NSURLConnection sendSynchronousRequest:request returningResponse:nil error:nil];
-    if (!responseData) return false;
-    
-    NSDictionary *json = [NSJSONSerialization JSONObjectWithData:responseData options:0 error:nil];
-    return [json[@"success"] boolValue];
 }
 
 void promptForKey() {
@@ -41,11 +55,9 @@ void promptForKey() {
     UIViewController *rootVC = nil;
 
     if (@available(iOS 13.0, *)) {
-        NSSet *scenes = [UIApplication.sharedApplication connectedScenes];
-        for (UIScene *scene in scenes) {
+        for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
             if ([scene isKindOfClass:[UIWindowScene class]]) {
-                UIWindowScene *windowScene = (UIWindowScene *)scene;
-                for (UIWindow *win in windowScene.windows) {
+                for (UIWindow *win in ((UIWindowScene *)scene).windows) {
                     if (win.isKeyWindow) {
                         window = win;
                         break;
@@ -54,12 +66,11 @@ void promptForKey() {
                 if (window) break;
             }
         }
-        rootVC = window.rootViewController;
     } else {
         window = UIApplication.sharedApplication.keyWindow;
-        rootVC = window.rootViewController;
     }
 
+    rootVC = window.rootViewController;
     if (!rootVC) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             isPromptShowing = false;
@@ -68,17 +79,19 @@ void promptForKey() {
         return;
     }
 
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"ramoss4m Auth"
-                                                                   message:@"Insira sua key para continuar."
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"FFH4X FFMAX"
+                                                                   message:@"Insira sua key exclusiva para continuar"
                                                             preferredStyle:UIAlertControllerStyleAlert];
+
     [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
         textField.placeholder = @"Sua Key";
     }];
 
     UIAlertAction *confirm = [UIAlertAction actionWithTitle:@"Verificar" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         NSString *inputKey = alert.textFields.firstObject.text;
-        if (validateKey(inputKey, [[[UIDevice currentDevice] identifierForVendor] UUIDString])) {
-            [[NSUserDefaults standardUserDefaults] setObject:inputKey forKey:@"user_key"];
+        if (isUUIDValid() && isKeyValid(inputKey)) {
+            [[NSUserDefaults standardUserDefaults] setObject:inputKey forKey:@STORED_KEY];
+            saveActivationDate();
             [[NSUserDefaults standardUserDefaults] synchronize];
             isPromptShowing = false;
         } else {
@@ -88,7 +101,6 @@ void promptForKey() {
     }];
 
     [alert addAction:confirm];
-
     dispatch_async(dispatch_get_main_queue(), ^{
         [rootVC presentViewController:alert animated:YES completion:nil];
     });
