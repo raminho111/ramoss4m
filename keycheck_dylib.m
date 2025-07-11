@@ -1,86 +1,69 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
-#define TOTAL_KEYS 100
+#define MAX_KEYS 100
 
-typedef struct {
-    __unsafe_unretained NSString *key;
-    NSTimeInterval validityDays;
-} LicenseKey;
-
-static LicenseKey validKeys[TOTAL_KEYS] = {
-    {@"ramos-X5T3Q-F9PL0", 7}, {@"ramos-K2VD8-J8RLC", 7}, {@"ramos-A7UZT-P0KL3", 7},
-    {@"ramos-L5B2X-W1QNP", 7}, {@"ramos-E4YXM-M3FJ9", 7}, {@"ramos-W9ZQM-U2GKD", 7},
-    {@"ramos-C2JVL-V7UEQ", 7}, {@"ramos-H3YPU-Y0KMN", 7}, {@"ramos-P5RTO-K3DJC", 7},
-    {@"ramos-V7EMQ-X4KWP", 7}, {@"ramos-D1HZA-C7MYL", 7}, {@"ramos-G3TNO-J6AVX", 7},
-    {@"ramos-N6WRM-E5BJL", 7}, {@"ramos-B8YDK-T0ZRM", 7}, {@"ramos-M1LQC-Z2XJK", 7},
-    {@"ramos-Q2UYA-K9CMZ", 7}, {@"ramos-R5AVB-J3FZL", 7}, {@"ramos-F9HZK-W6UPM", 7},
-    {@"ramos-T8LMW-Y3NKD", 7}, {@"ramos-Z3UPT-D1VXM", 7},
-
-    {@"ramos-J0NWB-B9GZX", 15}, {@"ramos-X1DQC-T4LZN", 15}, {@"ramos-K7YUJ-F0JDL", 15},
-    {@"ramos-V6MWR-M2PCX", 15}, {@"ramos-E3UZY-K7XJL", 15}, {@"ramos-T4PXB-C9LZV", 15},
-    {@"ramos-F5YKM-W1VUZ", 15}, {@"ramos-H9UZN-K5YXM", 15}, {@"ramos-Q4LMW-X0NTZ", 15},
-    {@"ramos-Z1TJC-F7RML", 15}, {@"ramos-C2MWN-Y8PAK", 15}, {@"ramos-G0VXP-D2UJL", 15},
-    {@"ramos-M3YUZ-V9NKC", 15}, {@"ramos-N9RXJ-Z1CLQ", 15}, {@"ramos-D8PUW-K6LXY", 15},
-    {@"ramos-B3QTL-X9MYN", 15}, {@"ramos-A5KYC-R4PWJ", 15}, {@"ramos-U2ZMV-F8WCL", 15},
-    {@"ramos-L7WQX-J0TVD", 15}, {@"ramos-Y6TXB-M3ZVK", 15},
-
-    {@"ramos-P9AKW-B3YJL", 30}, {@"ramos-X4VNL-C5WQM", 30}, {@"ramos-J1QWM-X8PKY", 30},
-    {@"ramos-K3UPX-N2TJQ", 30}, {@"ramos-V8DYC-Y9KLN", 30}, {@"ramos-Z7MXB-P5VLW", 30},
-    {@"ramos-Q0ULC-T1MXN", 30}, {@"ramos-H5PYX-K7DWC", 30}, {@"ramos-F3ZWJ-Y4NVC", 30},
-    {@"ramos-E1XKL-J6TZW", 30}, {@"ramos-L6VKQ-W8RMC", 30}, {@"ramos-M0XZT-D2LNP", 30},
-    {@"ramos-N7AQY-X9PKV", 30}, {@"ramos-C5VRM-F3TLZ", 30}, {@"ramos-B2MWZ-P0KLC", 30},
-    {@"ramos-G9YTC-Z1NQV", 30}, {@"ramos-T3RXJ-L7MWC", 30}, {@"ramos-Y5PKQ-V2UCL", 30},
-    {@"ramos-D0ZYN-K3JXV", 30}, {@"ramos-A6MQB-X5LRC", 30},
-
-    {@"ramos-R1KQY-W3DMC", 0}, {@"ramos-S2XZW-L9YNP", 0}, {@"ramos-W0NMC-X2TVK", 0},
-    {@"ramos-J9ZPQ-D6RLW", 0}, {@"ramos-V3YLK-K1UPQ", 0}, {@"ramos-E2XVM-Z5MWY", 0},
-    {@"ramos-T7PLQ-Y3DNC", 0}, {@"ramos-Q9KZW-F0TJL", 0}, {@"ramos-H1NMC-W6LQB", 0},
-    {@"ramos-K8RYZ-J2VPM", 0}, {@"ramos-Z6UKL-M5XWC", 0}, {@"ramos-N0XBW-T9JVL", 0},
-    {@"ramos-B5LKM-Y7PQD", 0}, {@"ramos-F6QWC-D3MLN", 0}, {@"ramos-A9WTP-X4JCM", 0},
-    {@"ramos-M8RXC-K6UPZ", 0}, {@"ramos-D1ZYL-V1NQK", 0}, {@"ramos-C3MWZ-J0PKL", 0},
-    {@"ramos-Y2KQT-F7VWC", 0}, {@"ramos-U0TWM-L9DYC", 0}, {@"ramos-G8PLV-M2NJK", 0},
-    {@"ramos-X5AVC-Z8RLW", 0}, {@"ramos-J3WQN-K4YLP", 0}, {@"ramos-K6XBP-P9MNL", 0},
-    {@"ramos-T1VXM-D5YQK", 0}, {@"ramos-R4ULW-X7JKP", 0}, {@"ramos-H2NZC-V0MLW", 0},
-    {@"ramos-Z9YKW-Y1RNL", 0}, {@"ramos-Q5TXM-K3DPL", 0}, {@"ramos-L7PMB-X2UQN", 0},
-    {@"ramos-N3ZLK-J6MKP", 0}, {@"ramos-B0KYW-W8RPQ", 0}, {@"ramos-G4YTC-L5NVK", 0},
-    {@"ramos-A2PXZ-Y9JQC", 0}, {@"ramos-F8VMW-T3PKD", 0}, {@"ramos-E7KYC-X0MRL", 0},
-    {@"ramos-M6QTB-P1LKC", 0}, {@"ramos-C1UPW-Z6NKQ", 0}, {@"ramos-D9XTV-Y8RLJ", 0},
-    {@"ramos-Y4LMK-K2UPX", 0}, {@"ramos-U5MWP-M7YTL", 0}
+static NSString *validKeys[MAX_KEYS] = {
+    @"ramos-19A7E-AB3XZ", @"ramos-F8K2Q-W8YLM", @"ramos-3DL9T-RQ5NE", @"ramos-KJ1QZ-HT9XP",
+    @"ramos-ZU8NY-AL4PQ", @"ramos-UE0JW-SX2LE", @"ramos-CR6ZM-LW4KF", @"ramos-EX9LD-NC1TB",
+    @"ramos-YT3MB-JR2ED", @"ramos-BN2QU-ZP9KH", @"ramos-QM6FD-WK4TX", @"ramos-XL5RY-HM2VL",
+    @"ramos-TN7KP-VR8UE", @"ramos-VF3JD-ZL6NH", @"ramos-MP1UZ-RB9TW", @"ramos-WX2CL-YD3EQ",
+    @"ramos-ZT8VN-GK7MW", @"ramos-KY5XJ-NH1DF", @"ramos-HC4WM-LE6TP", @"ramos-DN9BR-UX3QK",
+    // 15 dias
+    @"ramos-FD5EL-PW7ZK", @"ramos-XU9KP-JM4VQ", @"ramos-KE6YD-WX1CB", @"ramos-LQ3MU-TP5NZ",
+    @"ramos-AP2JV-ZK7RE", @"ramos-NY1XD-GF3TB", @"ramos-TK4ZR-MU9JY", @"ramos-RB7WD-XC6QE",
+    @"ramos-ZN6YM-LF5UJ", @"ramos-VJ8QE-NK2TX", @"ramos-HX9MB-WD3CL", @"ramos-KT3RW-ZV8NM",
+    @"ramos-QL5EP-JF1DU", @"ramos-BW2TX-GH9MC", @"ramos-MZ1KU-YL4VJ", @"ramos-JC7QM-RX6EB",
+    @"ramos-WE9TZ-VN3LY", @"ramos-YX4PJ-UG7KC", @"ramos-LB6EW-KN2FD", @"ramos-FV3UP-DJ9TZ",
+    // 30 dias
+    @"ramos-ZD9MR-YK8TL", @"ramos-TC1JL-QN3XB", @"ramos-KV5XP-WD7RJ", @"ramos-NM4QY-HX9LU",
+    @"ramos-XB2LE-VK5MJ", @"ramos-QR8JD-NY7TP", @"ramos-PT6XM-GF2UC", @"ramos-JF3YW-RB4LK",
+    @"ramos-WD7QL-MZ1VU", @"ramos-LN9TC-KQ3YW", @"ramos-EK5UB-ZF7XD", @"ramos-VT3MP-YD9NC",
+    @"ramos-HL1XE-WR6KZ", @"ramos-MB7YQ-XV2LU", @"ramos-RK6JN-TC9PV", @"ramos-YQ3LU-MD8BW",
+    @"ramos-XN4KC-WP7LQ", @"ramos-TZ5EM-RK3VY", @"ramos-GD1LF-XB6QM", @"ramos-WK2YZ-JT9UC",
+    // Ilimitadas (sem expiração)
+    @"ramos-ILIM-001", @"ramos-ILIM-002", @"ramos-ILIM-003", @"ramos-ILIM-004", @"ramos-ILIM-005",
+    @"ramos-ILIM-006", @"ramos-ILIM-007", @"ramos-ILIM-008", @"ramos-ILIM-009", @"ramos-ILIM-010",
+    @"ramos-ILIM-011", @"ramos-ILIM-012", @"ramos-ILIM-013", @"ramos-ILIM-014", @"ramos-ILIM-015",
+    @"ramos-ILIM-016", @"ramos-ILIM-017", @"ramos-ILIM-018", @"ramos-ILIM-019", @"ramos-ILIM-020"
 };
 
-NSString *getUUID() {
-    return [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+int keyIndex(NSString *key) {
+    for (int i = 0; i < MAX_KEYS; i++) {
+        if ([validKeys[i] isEqualToString:key]) return i;
+    }
+    return -1;
 }
 
-bool isKeyValid(NSString *inputKey) {
-    NSString *uuid = getUUID();
+BOOL isKeyValid(NSString *key) {
+    NSInteger idx = keyIndex(key);
+    if (idx == -1) return NO;
+
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *storedKey = [defaults stringForKey:@"offline_key"];
+    NSDate *activationDate = [defaults objectForKey:@"activation_date"];
 
-    for (int i = 0; i < TOTAL_KEYS; i++) {
-        if ([inputKey isEqualToString:validKeys[i].key]) {
-            NSString *storedUUID = [defaults stringForKey:[@"uuid_" stringByAppendingString:inputKey]];
-            NSDate *activationDate = [defaults objectForKey:[@"date_" stringByAppendingString:inputKey]];
-            NSTimeInterval validity = validKeys[i].validityDays;
-
-            if (storedUUID && ![storedUUID isEqualToString:uuid]) return false;
-
-            if (!storedUUID) {
-                [defaults setObject:uuid forKey:[@"uuid_" stringByAppendingString:inputKey]];
-                [defaults setObject:[NSDate date] forKey:[@"date_" stringByAppendingString:inputKey]];
-                [defaults synchronize];
-                return true;
-            }
-
-            if (validity > 0 && activationDate) {
-                NSTimeInterval timeElapsed = [[NSDate date] timeIntervalSinceDate:activationDate];
-                return timeElapsed <= validity * 86400;
-            }
-
-            return true;
+    if (storedKey && [storedKey isEqualToString:key] && activationDate) {
+        NSTimeInterval elapsed = [[NSDate date] timeIntervalSinceDate:activationDate];
+        if ((idx < 20 && elapsed > 7*86400) || (idx < 40 && elapsed > 15*86400) || (idx < 60 && elapsed > 30*86400)) {
+            return NO;
         }
+        return YES;
     }
-    return false;
+    return YES; // Primeira vez, permitido. Depois, salva.
+}
+
+void showKeyPrompt();
+
+__attribute__((constructor))
+static void init() {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *key = [defaults stringForKey:@"offline_key"];
+    if (!key || !isKeyValid(key)) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            showKeyPrompt();
+        });
+    }
 }
 
 void showKeyPrompt() {
@@ -89,21 +72,46 @@ void showKeyPrompt() {
     showing = YES;
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        UIWindow *window = UIApplication.sharedApplication.windows.firstObject;
-        UIViewController *vc = window.rootViewController;
+        UIWindow *window = nil;
+        UIViewController *vc = nil;
 
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"FFH4X FFMAX"
+        if (@available(iOS 13.0, *)) {
+            for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+                if ([scene isKindOfClass:[UIWindowScene class]]) {
+                    for (UIWindow *win in ((UIWindowScene *)scene).windows) {
+                        if (win.isKeyWindow) {
+                            window = win;
+                            break;
+                        }
+                    }
+                    if (window) break;
+                }
+            }
+        } else {
+            window = UIApplication.sharedApplication.keyWindow;
+        }
+
+        vc = window.rootViewController;
+        if (!vc) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                showing = NO;
+                showKeyPrompt();
+            });
+            return;
+        }
+
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"RAMOS FFH4X"
                                                                        message:@"Insira sua key para continuar"
                                                                 preferredStyle:UIAlertControllerStyleAlert];
         [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
             textField.placeholder = @"ramos-XXXXX-XXXXX";
         }];
         UIAlertAction *ok = [UIAlertAction actionWithTitle:@"Verificar" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-            NSString *key = alert.textFields.firstObject.text;
-            if (isKeyValid(key)) {
-                [[NSUserDefaults standardUserDefaults] setObject:key forKey:@"user_key"];
+            NSString *inputKey = alert.textFields.firstObject.text;
+            if (isKeyValid(inputKey)) {
+                [[NSUserDefaults standardUserDefaults] setObject:inputKey forKey:@"offline_key"];
+                [[NSUserDefaults standardUserDefaults] setObject:[NSDate date] forKey:@"activation_date"];
                 [[NSUserDefaults standardUserDefaults] synchronize];
-                showing = NO;
             } else {
                 showing = NO;
                 showKeyPrompt();
@@ -112,12 +120,4 @@ void showKeyPrompt() {
         [alert addAction:ok];
         [vc presentViewController:alert animated:YES completion:nil];
     });
-}
-
-__attribute__((constructor))
-void start() {
-    NSString *key = [[NSUserDefaults standardUserDefaults] stringForKey:@"user_key"];
-    if (!key || !isKeyValid(key)) {
-        showKeyPrompt();
-    }
 }
