@@ -8,7 +8,7 @@
 
 // -------- CONFIG --------
 static NSString *validKeys[TOTAL_KEYS] = {
-    @"ramos-ABC12-DEF34", @"ramos-GHI56-JKL78", @" @"ramos-19A7E-AB3XZ", @"ramos-F8K2Q-W8YLM", @"ramos-3DL9T-RQ5NE", @"ramos-KJ1QZ-HT9XP",
+    @"ramos-ABC12-DEF34", @"ramos-GHI56-JKL78", @"ramos-19A7E-AB3XZ", @"ramos-F8K2Q-W8YLM", @"ramos-3DL9T-RQ5NE", @"ramos-KJ1QZ-HT9XP",
     @"ramos-ZU8NY-AL4PQ", @"ramos-UE0JW-SX2LE", @"ramos-CR6ZM-LW4KF", @"ramos-EX9LD-NC1TB",
     @"ramos-YT3MB-JR2ED", @"ramos-BN2QU-ZP9KH", @"ramos-QM6FD-WK4TX", @"ramos-XL5RY-HM2VL",
     @"ramos-TN7KP-VR8UE", @"ramos-VF3JD-ZL6NH", @"ramos-MP1UZ-RB9TW", @"ramos-WX2CL-YD3EQ",
@@ -32,14 +32,14 @@ static NSString *validKeys[TOTAL_KEYS] = {
     @"ramos-ILIM-016", @"ramos-ILIM-017", @"ramos-ILIM-018", @"ramos-ILIM-019", @"ramos-ILIM-020"
 };
 
-    // 
-};
-
 static NSTimeInterval keyExpiryDays[TOTAL_KEYS] = {
+    // 7 dias
     7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+    // 15 dias
     15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,
+    // 30 dias
     30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    // Ilimitadas (0 = sem expiração)
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
