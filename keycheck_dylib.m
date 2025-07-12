@@ -1,10 +1,14 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
-#define MAX_KEYS 100
+#define TOTAL_KEYS 100
+#define KEY_PREFIX @"ramos-"
+#define ALERT_TITLE @"RAMOS FFH4X"
+#define ALERT_MSG @"Insira sua key para continuar."
 
-static NSString *validKeys[MAX_KEYS] = {
-    @"ramos-19A7E-AB3XZ", @"ramos-F8K2Q-W8YLM", @"ramos-3DL9T-RQ5NE", @"ramos-KJ1QZ-HT9XP",
+// -------- CONFIG --------
+static NSString *validKeys[TOTAL_KEYS] = {
+    @"ramos-ABC12-DEF34", @"ramos-GHI56-JKL78", @" @"ramos-19A7E-AB3XZ", @"ramos-F8K2Q-W8YLM", @"ramos-3DL9T-RQ5NE", @"ramos-KJ1QZ-HT9XP",
     @"ramos-ZU8NY-AL4PQ", @"ramos-UE0JW-SX2LE", @"ramos-CR6ZM-LW4KF", @"ramos-EX9LD-NC1TB",
     @"ramos-YT3MB-JR2ED", @"ramos-BN2QU-ZP9KH", @"ramos-QM6FD-WK4TX", @"ramos-XL5RY-HM2VL",
     @"ramos-TN7KP-VR8UE", @"ramos-VF3JD-ZL6NH", @"ramos-MP1UZ-RB9TW", @"ramos-WX2CL-YD3EQ",
@@ -28,96 +32,115 @@ static NSString *validKeys[MAX_KEYS] = {
     @"ramos-ILIM-016", @"ramos-ILIM-017", @"ramos-ILIM-018", @"ramos-ILIM-019", @"ramos-ILIM-020"
 };
 
-int keyIndex(NSString *key) {
-    for (int i = 0; i < MAX_KEYS; i++) {
-        if ([validKeys[i] isEqualToString:key]) return i;
-    }
-    return -1;
-}
+    // 
+};
 
-BOOL isKeyValid(NSString *key) {
-    NSInteger idx = keyIndex(key);
-    if (idx == -1) return NO;
+static NSTimeInterval keyExpiryDays[TOTAL_KEYS] = {
+    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+    15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,
+    30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
 
+#define STORED_KEY @"user_key"
+#define STORED_UUID @"device_uuid"
+#define STORED_DATE @"activation_date"
+
+static bool isPromptShowing = false;
+
+bool validateKey(NSString *key, NSString *uuid) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSString *storedKey = [defaults stringForKey:@"offline_key"];
-    NSDate *activationDate = [defaults objectForKey:@"activation_date"];
+    for (int i = 0; i < TOTAL_KEYS; i++) {
+        if ([key isEqualToString:validKeys[i]]) {
+            NSString *storedUUID = [defaults stringForKey:STORED_UUID];
+            if (!storedUUID || [storedUUID isEqualToString:uuid]) {
+                NSTimeInterval expiryDays = keyExpiryDays[i];
+                if (expiryDays == 0) return true; // Permanente
 
-    if (storedKey && [storedKey isEqualToString:key] && activationDate) {
-        NSTimeInterval elapsed = [[NSDate date] timeIntervalSinceDate:activationDate];
-        if ((idx < 20 && elapsed > 7*86400) || (idx < 40 && elapsed > 15*86400) || (idx < 60 && elapsed > 30*86400)) {
-            return NO;
+                NSDate *activationDate = [defaults objectForKey:STORED_DATE];
+                if (!activationDate) return true; // Primeiro uso: válido, ativar
+                NSDate *now = [NSDate date];
+                NSTimeInterval elapsed = [now timeIntervalSinceDate:activationDate];
+                return elapsed < (expiryDays * 24 * 60 * 60);
+            }
         }
-        return YES;
     }
-    return YES; // Primeira vez, permitido. Depois, salva.
+    return false;
 }
 
-void showKeyPrompt();
+void promptForKey(void);
 
 __attribute__((constructor))
-static void init() {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSString *key = [defaults stringForKey:@"offline_key"];
-    if (!key || !isKeyValid(key)) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            showKeyPrompt();
-        });
-    }
+static void initialize() {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        NSString *savedKey = [defaults stringForKey:STORED_KEY];
+        NSString *uuid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+
+        if (!savedKey || !validateKey(savedKey, uuid)) {
+            promptForKey();
+        }
+    });
 }
 
-void showKeyPrompt() {
-    static BOOL showing = NO;
-    if (showing) return;
-    showing = YES;
+void promptForKey() {
+    if (isPromptShowing) return;
+    isPromptShowing = true;
 
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIWindow *window = nil;
-        UIViewController *vc = nil;
+    UIWindow *window = nil;
+    UIViewController *rootVC = nil;
 
-        if (@available(iOS 13.0, *)) {
-            for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
-                if ([scene isKindOfClass:[UIWindowScene class]]) {
-                    for (UIWindow *win in ((UIWindowScene *)scene).windows) {
-                        if (win.isKeyWindow) {
-                            window = win;
-                            break;
-                        }
+    if (@available(iOS 13.0, *)) {
+        for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+            if ([scene isKindOfClass:[UIWindowScene class]]) {
+                for (UIWindow *win in ((UIWindowScene *)scene).windows) {
+                    if (win.isKeyWindow) {
+                        window = win;
+                        break;
                     }
-                    if (window) break;
                 }
             }
-        } else {
-            window = UIApplication.sharedApplication.keyWindow;
         }
+    } else {
+        window = UIApplication.sharedApplication.keyWindow;
+    }
+    rootVC = window.rootViewController;
+    if (!rootVC) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            isPromptShowing = false;
+            promptForKey();
+        });
+        return;
+    }
 
-        vc = window.rootViewController;
-        if (!vc) {
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                showing = NO;
-                showKeyPrompt();
-            });
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:ALERT_TITLE
+                                                                   message:ALERT_MSG
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+        textField.placeholder = @"Sua Key";
+    }];
+
+    UIAlertAction *confirm = [UIAlertAction actionWithTitle:@"Verificar" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        NSString *inputKey = alert.textFields.firstObject.text;
+        NSString *uuid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+
+        if (validateKey(inputKey, uuid)) {
+            NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+            [defaults setObject:inputKey forKey:STORED_KEY];
+            [defaults setObject:uuid forKey:STORED_UUID];
+            if (![defaults objectForKey:STORED_DATE]) {
+                [defaults setObject:[NSDate date] forKey:STORED_DATE];
+            }
+            [defaults synchronize];
+        } else {
+            isPromptShowing = false;
+            promptForKey();
             return;
         }
+        isPromptShowing = false;
+    }];
 
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"RAMOS FFH4X"
-                                                                       message:@"Insira sua key para continuar"
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
-            textField.placeholder = @"ramos-XXXXX-XXXXX";
-        }];
-        UIAlertAction *ok = [UIAlertAction actionWithTitle:@"Verificar" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-            NSString *inputKey = alert.textFields.firstObject.text;
-            if (isKeyValid(inputKey)) {
-                [[NSUserDefaults standardUserDefaults] setObject:inputKey forKey:@"offline_key"];
-                [[NSUserDefaults standardUserDefaults] setObject:[NSDate date] forKey:@"activation_date"];
-                [[NSUserDefaults standardUserDefaults] synchronize];
-            } else {
-                showing = NO;
-                showKeyPrompt();
-            }
-        }];
-        [alert addAction:ok];
-        [vc presentViewController:alert animated:YES completion:nil];
-    });
+    [alert addAction:confirm];
+    [rootVC presentViewController:alert animated:YES completion:nil];
 }
