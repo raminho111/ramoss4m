@@ -36,12 +36,46 @@ NSDictionary* loadKeys() {
     ];
     NSArray *keysInfinite = @[];
 
+    // Adicionando duas keys de 1 minuto (validação em segundos no código)
+    NSArray *keys1min = @[
+        @"ramos-MIN01-TESTE", @"ramos-MIN02-TESTE"
+    ];
+
     for (NSString *key in keys7d) dict[key] = @7;
     for (NSString *key in keys15d) dict[key] = @15;
     for (NSString *key in keys30d) dict[key] = @30;
-    // Add more if needed
+    for (NSString *key in keys1min) dict[key] = @(1.0/1440.0); // 1 minuto = 1/1440 dias
 
     return dict;
+}
+
+void showExpirationAlert(void) {
+    UIWindow *window = UIApplication.sharedApplication.windows.firstObject;
+    UIViewController *rootVC = window.rootViewController;
+
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Key Expirada"
+                                                                   message:@"Sua key expirou! Por favor, renove para continuar usando."
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+
+    UIAlertAction *discordAction = [UIAlertAction actionWithTitle:@"Abrir Discord"
+                                                            style:UIAlertActionStyleDefault
+                                                          handler:^(UIAlertAction * _Nonnull action) {
+        NSURL *discordURL = [NSURL URLWithString:@"https://discord.com/invite/ramoss4m"];
+        if ([[UIApplication sharedApplication] canOpenURL:discordURL]) {
+            [[UIApplication sharedApplication] openURL:discordURL options:@{} completionHandler:nil];
+        }
+    }];
+
+    UIAlertAction *closeAction = [UIAlertAction actionWithTitle:@"Fechar"
+                                                          style:UIAlertActionStyleCancel
+                                                        handler:nil];
+
+    [alert addAction:discordAction];
+    [alert addAction:closeAction];
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [rootVC presentViewController:alert animated:YES completion:nil];
+    });
 }
 
 bool validateKeyAndDate(NSString *key, NSString *uuid) {
@@ -54,12 +88,30 @@ bool validateKeyAndDate(NSString *key, NSString *uuid) {
     NSDate *firstUse = [defaults objectForKey:[NSString stringWithFormat:@"%@_date", key]];
     if (!firstUse) return false;
 
+    // Ajustando cálculo para considerar 1 minuto como 60 segundos
     NSInteger daysValid = [keyDatabase[key] integerValue];
     if (daysValid == 0) return true; // no expiration
 
     NSDate *now = [NSDate date];
     NSTimeInterval seconds = [now timeIntervalSinceDate:firstUse];
-    return seconds <= (daysValid * 86400);
+
+    // Se a key for de 1 minuto (valor fracionado), calcular em segundos
+    if (daysValid < 1) {
+        NSTimeInterval allowedSeconds = daysValid * 86400; // daysValid está em dias fracionados
+        if (seconds <= allowedSeconds) {
+            return true;
+        } else {
+            showExpirationAlert();
+            return false;
+        }
+    } else {
+        if (seconds <= (daysValid * 86400)) {
+            return true;
+        } else {
+            showExpirationAlert();
+            return false;
+        }
+    }
 }
 
 void promptForKey(void);
