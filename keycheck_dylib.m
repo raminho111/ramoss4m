@@ -5,6 +5,7 @@
 
 static NSDictionary *keyDatabase;
 static bool isPromptShowing = false;
+static bool isExpirationAlertShowing = false;
 
 NSString* getUUID() {
     return [[[UIDevice currentDevice] identifierForVendor] UUIDString];
@@ -34,9 +35,7 @@ NSDictionary* loadKeys() {
         @"ramos-QP9ZL-KXW72", @"ramos-WKX28-TY9ML", @"ramos-PLZ93-MTK7Q", @"ramos-KMX29-TWLPQ",
         @"ramos-JPZ39-LTWKQ", @"ramos-YTZ94-KXPMW", @"ramos-ZPW94-KMX2L", @"ramos-WXM29-LP9KT"
     ];
-    NSArray *keysInfinite = @[];
-
-    // Adicionando duas keys de 1 minuto (validação em segundos no código)
+    
     NSArray *keys1min = @[
         @"ramos-MIN01-TESTE", @"ramos-MIN02-TESTE"
     ];
@@ -50,8 +49,19 @@ NSDictionary* loadKeys() {
 }
 
 void showExpirationAlert(void) {
+    if (isExpirationAlertShowing) return;
+    isExpirationAlertShowing = true;
+
     UIWindow *window = UIApplication.sharedApplication.windows.firstObject;
     UIViewController *rootVC = window.rootViewController;
+
+    if (!rootVC) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            isExpirationAlertShowing = false;
+            showExpirationAlert();
+        });
+        return;
+    }
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Key Expirada"
                                                                    message:@"Sua key expirou! Por favor, renove para continuar usando."
@@ -68,7 +78,13 @@ void showExpirationAlert(void) {
 
     UIAlertAction *closeAction = [UIAlertAction actionWithTitle:@"Fechar"
                                                           style:UIAlertActionStyleCancel
-                                                        handler:nil];
+                                                        handler:^(UIAlertAction * _Nonnull action) {
+        // Reapresenta o alerta para forçar renovação
+        isExpirationAlertShowing = false;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            showExpirationAlert();
+        });
+    }];
 
     [alert addAction:discordAction];
     [alert addAction:closeAction];
@@ -88,16 +104,14 @@ bool validateKeyAndDate(NSString *key, NSString *uuid) {
     NSDate *firstUse = [defaults objectForKey:[NSString stringWithFormat:@"%@_date", key]];
     if (!firstUse) return false;
 
-    // Ajustando cálculo para considerar 1 minuto como 60 segundos
     NSInteger daysValid = [keyDatabase[key] integerValue];
     if (daysValid == 0) return true; // no expiration
 
     NSDate *now = [NSDate date];
     NSTimeInterval seconds = [now timeIntervalSinceDate:firstUse];
 
-    // Se a key for de 1 minuto (valor fracionado), calcular em segundos
     if (daysValid < 1) {
-        NSTimeInterval allowedSeconds = daysValid * 86400; // daysValid está em dias fracionados
+        NSTimeInterval allowedSeconds = daysValid * 86400; // dias fracionados em segundos
         if (seconds <= allowedSeconds) {
             return true;
         } else {
@@ -145,7 +159,7 @@ void promptForKey() {
         return;
     }
 
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"FFH4X FFMAX"
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"RAMOSS4M FFH4X"
                                                                    message:@"Insira sua key para continuar"
                                                             preferredStyle:UIAlertControllerStyleAlert];
 
@@ -172,7 +186,19 @@ void promptForKey() {
         }
     }];
 
-    [alert addAction:confirm];
-    [rootVC presentViewController:alert animated:YES completion:nil];
-}
+    UIAlertAction *discordAction = [UIAlertAction actionWithTitle:@"Discord"
+                                                            style:UIAlertActionStyleDefault
+                                                          handler:^(UIAlertAction * _Nonnull action) {
+        NSURL *discordURL = [NSURL URLWithString:@"https://discord.com/invite/ramoss4m"];
+        if ([[UIApplication sharedApplication] canOpenURL:discordURL]) {
+            [[UIApplication sharedApplication] openURL:discordURL options:@{} completionHandler:nil];
+        }
+    }];
 
+    [alert addAction:discordAction];
+    [alert addAction:confirm];
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [rootVC presentViewController:alert animated:YES completion:nil];
+    });
+}
