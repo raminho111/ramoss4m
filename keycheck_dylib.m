@@ -30,7 +30,7 @@ NSString * getUUID(void) {
 NSDictionary * loadLocalKeys(void) {
     if (gKeyDatabase) return gKeyDatabase;
     NSMutableDictionary *dict = [NSMutableDictionary dictionary];
-    NSArray *keys7d = @[@"ramos-XA12B-BT7YQ", @"ramos-B29TG-NVU92", @"ramos-19CXP-4UEZL"];
+    NSArray *keys7d = @[@"ramos-XA12B-BT7YQ", @"ramos-B29TG-NVU92"]; // reduzido para exemplo
     for (NSString *k in keys7d) dict[k] = @7;
     gKeyDatabase = [dict copy];
     return gKeyDatabase;
@@ -68,7 +68,7 @@ NSString * loadStringFromKeychain(NSString *service) {
     return nil;
 }
 
-#pragma mark - Expiration timer
+#pragma mark - Expiration timer helpers
 
 void cancelExpirationTimer(void) {
     if (gExpirationTimer) {
@@ -119,66 +119,13 @@ bool validateKeyOffline(NSString *key, NSString *uuid) {
     return false;
 }
 
-#pragma mark - Online validation
-
-typedef void (^KeyAuthLicenseCompletion)(BOOL success, NSDictionary *json, NSError *err);
-
-NSString * urlEncode(NSString *s) {
-    if (!s) return @"";
-    NSCharacterSet *cs = [NSCharacterSet URLQueryAllowedCharacterSet];
-    return [s stringByAddingPercentEncodingWithAllowedCharacters:cs];
-}
-
-void validateKeyOnlineWithKeyAuth(NSString *key, KeyAuthLicenseCompletion completion) {
-    if (!key) {
-        if (completion) completion(NO, nil, [NSError errorWithDomain:@"KeyAuth" code:400 userInfo:@{NSLocalizedDescriptionKey:@"no key"}]);
-        return;
-    }
-    NSString *hwid = getUUID();
-    NSString *urlStr = [NSString stringWithFormat:@"%@?type=license&key=%@&name=%@&ownerid=%@&hwid=%@",
-                        kKeyAuthApiBase, urlEncode(key), urlEncode(kKeyAuthName), urlEncode(kKeyAuthOwnerId), urlEncode(hwid)];
-    NSURL *url = [NSURL URLWithString:urlStr];
-    NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:url];
-    req.HTTPMethod = @"GET";
-    req.timeoutInterval = 8.0;
-    NSURLSessionDataTask *t = [[NSURLSession sharedSession] dataTaskWithRequest:req completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-        if (error) { if (completion) completion(NO,nil,error); return; }
-        if (!data) { if (completion) completion(NO,nil,[NSError errorWithDomain:@"KeyAuth" code:500 userInfo:@{NSLocalizedDescriptionKey:@"no data"}]); return; }
-        NSError *jerr = nil;
-        NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jerr];
-        if (jerr) { if (completion) completion(NO,nil,jerr); return; }
-        BOOL success = [json[@"success"] boolValue];
-        if (completion) completion(success, json, nil);
-    }];
-    [t resume];
-}
-
-#pragma mark - Combined validation
-
-void validateKeyPreferOnline(NSString *inputKey, void (^result)(BOOL ok, NSString *reason)) {
-    if (!inputKey) { if (result) result(NO, @"no_key"); return; }
-    validateKeyOnlineWithKeyAuth(inputKey, ^(BOOL success, NSDictionary *json, NSError *err) {
-        if (success) {
-            NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-            [defaults setObject:inputKey forKey:@"key"];
-            [defaults setObject:getUUID() forKey:@"uuid"];
-            [defaults setObject:[NSDate date] forKey:[NSString stringWithFormat:@"%@_date", inputKey]];
-            [defaults synchronize];
-            if (json[@"token"]) saveStringToKeychain(@"_remote_token", json[@"token"]);
-            if (result) result(YES, @"online_valid");
-        } else {
-            BOOL ok = validateKeyOffline(inputKey, getUUID());
-            if (result) result(ok, ok?@"offline_valid":@"offline_invalid");
-        }
-    });
-}
-
 #pragma mark - Floating Button
 
 @interface RAMFloatingButton : UIButton
 @end
 
 @implementation RAMFloatingButton
+
 - (instancetype)initWithFrame:(CGRect)frame {
     if (self = [super initWithFrame:frame]) {
         self.clipsToBounds = YES;
@@ -206,34 +153,14 @@ void validateKeyPreferOnline(NSString *inputKey, void (^result)(BOOL ok, NSStrin
     center.y = fmax(topLimit, fmin(center.y, bottomLimit));
     win.center = center;
     [g setTranslation:CGPointZero inView:g.superview];
-
-    if (g.state == UIGestureRecognizerStateEnded) {
-        CGFloat threshold = 0.6 * CGRectGetWidth(win.bounds);
-        if (win.frame.origin.x < -threshold || win.frame.origin.x > UIScreen.mainScreen.bounds.size.width - CGRectGetWidth(win.bounds) + threshold) {
-            win.alpha = 0.6;
-        } else {
-            win.alpha = 1.0;
-        }
-    }
 }
 
 - (void)handleTap {
-    UIAlertController *mini = [UIAlertController alertControllerWithTitle:@"ramoss4m - discord: tiktok:" message:nil preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *discord = [UIAlertAction actionWithTitle:@"Abrir Discord" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        NSURL *u = [NSURL URLWithString:@"https://discord.gg/Qr6fENhzG8"];
-        if ([[UIApplication sharedApplication] canOpenURL:u]) {
-            [[UIApplication sharedApplication] openURL:u options:@{} completionHandler:nil];
-        }
-    }];
-    UIAlertAction *tiktok = [UIAlertAction actionWithTitle:@"Abrir TikTok" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        NSURL *u = [NSURL URLWithString:@"https://www.tiktok.com/@ramoss4m"];
-        if ([[UIApplication sharedApplication] canOpenURL:u]) {
-            [[UIApplication sharedApplication] openURL:u options:@{} completionHandler:nil];
-        }
-    }];
+    UIAlertController *mini = [UIAlertController alertControllerWithTitle:@"ramoss4m"
+                                                                   message:@"Mini painel"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
     UIAlertAction *close = [UIAlertAction actionWithTitle:@"Fechar" style:UIAlertActionStyleCancel handler:nil];
-    [mini addAction:discord]; [mini addAction:tiktok]; [mini addAction:close];
-
+    [mini addAction:close];
     dispatch_async(dispatch_get_main_queue(), ^{
         UIWindow *keyW = UIApplication.sharedApplication.keyWindow ?: UIApplication.sharedApplication.windows.firstObject;
         UIViewController *root = keyW.rootViewController;
@@ -242,6 +169,7 @@ void validateKeyPreferOnline(NSString *inputKey, void (^result)(BOOL ok, NSStrin
         [presenting presentViewController:mini animated:YES completion:nil];
     });
 }
+
 @end
 
 #pragma mark - Floating window
@@ -260,19 +188,24 @@ void showFloatingButton(void) {
         gFloatingWindow.hidden = NO;
 
         RAMFloatingButton *btn = [[RAMFloatingButton alloc] initWithFrame:gFloatingWindow.bounds];
-        UIImage *img = [UIImage imageNamed:@"r"];
-        if (!img) {
-            UIGraphicsBeginImageContextWithOptions(btn.bounds.size, NO, 0);
-            [[UIColor redColor] setFill];
-            UIBezierPath *p = [UIBezierPath bezierPathWithOvalInRect:btn.bounds];
-            [p fill];
-            UIImage *circle = UIGraphicsGetImageFromCurrentImageContext();
-            UIGraphicsEndImageContext();
-            [btn setImage:circle forState:UIControlStateNormal];
-        } else {
-            [btn setImage:img forState:UIControlStateNormal];
-            btn.imageView.contentMode = UIViewContentModeScaleAspectFill;
-        }
+
+        // Desenhar letra "R" no centro
+        UIGraphicsBeginImageContextWithOptions(btn.bounds.size, NO, 0);
+        [[UIColor redColor] setFill];
+        UIBezierPath *p = [UIBezierPath bezierPathWithOvalInRect:btn.bounds];
+        [p fill];
+        NSString *rStr = @"R";
+        NSDictionary *attr = @{NSFontAttributeName: [UIFont boldSystemFontOfSize:36],
+                               NSForegroundColorAttributeName: [UIColor whiteColor]};
+        CGSize textSize = [rStr sizeWithAttributes:attr];
+        CGPoint textPoint = CGPointMake((btn.bounds.size.width - textSize.width)/2,
+                                        (btn.bounds.size.height - textSize.height)/2);
+        [rStr drawAtPoint:textPoint withAttributes:attr];
+        UIImage *circleR = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+
+        [btn setImage:circleR forState:UIControlStateNormal];
+        btn.imageView.contentMode = UIViewContentModeScaleAspectFill;
         [gFloatingWindow addSubview:btn];
     });
 }
@@ -283,69 +216,10 @@ void ensureFloatingExists(void) {
     });
 }
 
-#pragma mark - Prompt for key
-
-void promptForKey(void);
-
 __attribute__((constructor))
 static void ram_initialize(void) {
     loadLocalKeys();
-    [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
-        NSString *curKey = [[NSUserDefaults standardUserDefaults] stringForKey:@"key"];
-        if (!curKey) { promptForKey(); } else { validateKeyPreferOnline(curKey, ^(BOOL ok, NSString *reason){ if(!ok) promptForKey(); }); }
-        ensureFloatingExists();
-    }];
-
     dispatch_async(dispatch_get_main_queue(), ^{
         ensureFloatingExists();
-        NSString *savedKey = [[NSUserDefaults standardUserDefaults] stringForKey:@"key"];
-        NSString *uuid = getUUID();
-        if (!savedKey || !validateKeyOffline(savedKey, uuid)) {
-            if (savedKey) { validateKeyPreferOnline(savedKey, ^(BOOL ok, NSString *reason){ if(!ok) promptForKey(); }); }
-            else { promptForKey(); }
-        }
-    });
-}
-
-void promptForKey(void) {
-    if (gIsPromptShowing) return;
-    gIsPromptShowing = true;
-    cancelExpirationTimer();
-
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIWindow *window = UIApplication.sharedApplication.keyWindow ?: UIApplication.sharedApplication.windows.firstObject;
-        UIViewController *rootVC = window.rootViewController;
-        if (!rootVC) {
-            gIsPromptShowing = false;
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ promptForKey(); });
-            return;
-        }
-
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"RAMOSS4M FFH4X" message:@"Insira sua key ou usuário" preferredStyle:UIAlertControllerStyleAlert];
-        [alert addTextFieldWithConfigurationHandler:^(UITextField *textField){ textField.placeholder = @"Sua Key ou usuário (ex: 1)"; textField.autocapitalizationType = UITextAutocapitalizationTypeAllCharacters; }];
-
-        UIAlertAction *confirm = [UIAlertAction actionWithTitle:@"Verificar" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){
-            NSString *input = alert.textFields.firstObject.text;
-            if (!input || input.length==0) { gIsPromptShowing=false; promptForKey(); return; }
-            validateKeyPreferOnline(input, ^(BOOL ok, NSString *reason){
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    gIsPromptShowing=false;
-                    if(!ok) promptForKey();
-                });
-            });
-        }];
-
-        UIAlertAction *discordAction = [UIAlertAction actionWithTitle:@"Discord" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action){
-            NSURL *discordURL = [NSURL URLWithString:@"https://discord.gg/Qr6fENhzG8"];
-            if ([[UIApplication sharedApplication] canOpenURL:discordURL]) [[UIApplication sharedApplication] openURL:discordURL options:@{} completionHandler:nil];
-            gIsPromptShowing=false;
-        }];
-
-        [alert addAction:discordAction];
-        [alert addAction:confirm];
-
-        UIViewController *presenting = rootVC;
-        while (presenting.presentedViewController) presenting = presenting.presentedViewController;
-        [presenting presentViewController:alert animated:YES completion:nil];
     });
 }
