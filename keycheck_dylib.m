@@ -3,27 +3,20 @@
 //  Uso: cole este arquivo no seu projeto iOS (Objective-C) e compile.
 //  Dependências: UIKit, Foundation, Security (Keychain).
 //
-//  Funcionalidades:
-//  - Prompt de login imediato no startup e onBecomeActive
-//  - Validação online via KeyAuth (license)
-//  - Fallback offline com lista de 99 keys alfanuméricas
-//  - Agendamento de timer local para reaparecer na expiração
-//  - Floating button (imagem "r") arrastável que abre um mini-panel (Discord/TikTok)
-//
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <Security/Security.h>
 
-#pragma mark - KeyAuth Configuration (já com seus dados)
+#pragma mark - KeyAuth Configuration
 
-static NSString * const kKeyAuthApiBase = @"https://keyauth.win/api/1.3/"; // endpoint padrão
+static NSString * const kKeyAuthApiBase = @"https://keyauth.win/api/1.3/";
 static NSString * const kKeyAuthName    = @"ramoss4m";
 static NSString * const kKeyAuthOwnerId = @"wBOrQJSMB8";
 static NSString * const kKeyAuthSecret  = @"5640b89484d0d686a373fb93897e63fb2664cdf2a9ca2260d9167382c0d1609e";
 static NSString * const kKeyAuthVersion = @"1.0";
 
-#pragma mark - Local keys (offline fallback)
+#pragma mark - Local keys
 
 static NSDictionary *gKeyDatabase = nil;
 static bool gIsPromptShowing = false;
@@ -37,44 +30,13 @@ NSString * getUUID(void) {
 NSDictionary * loadLocalKeys(void) {
     if (gKeyDatabase) return gKeyDatabase;
     NSMutableDictionary *dict = [NSMutableDictionary dictionary];
-
-    NSArray *keys7d = @[
-        @"ramos-XA12B-BT7YQ", @"ramos-B29TG-NVU92", @"ramos-19CXP-4UEZL", @"ramos-Q2R76-THW0K",
-        @"ramos-Z9T2Q-L2JNY", @"ramos-KI9ZT-GP5R7", @"ramos-W2YU9-8J5CV", @"ramos-3UYTD-55KL3",
-        @"ramos-YT83L-QKUIZ", @"ramos-HXZLK-M22TR", @"ramos-8NW9U-YXKLS", @"ramos-VP7RZ-LDKC3",
-        @"ramos-0M3TZ-WR6CJ", @"ramos-FEJ3A-RUKP0", @"ramos-DZXJL-UE9YP", @"ramos-LZUP4-KTXV6",
-        @"ramos-XWYTZ-M5ZQ3", @"ramos-PYUZS-R84JX", @"ramos-WQJ2L-F8M5D", @"ramos-EZLPK-HGX93",
-        @"ramos-AK72P-BTN43", @"ramos-M2JU1-KL2XP", @"ramos-TI9G3-WE9UP", @"ramos-LX9K2-JD03X",
-        @"ramos-V7EPL-N2J5M", @"ramos-NU32A-QWTZ4", @"ramos-KW84X-H3RLP", @"ramos-XZL5D-WY9PM",
-        @"ramos-QPA3M-LZX7N", @"ramos-IE3KM-VTP5Q", @"ramos-GW93P-KLZUX", @"ramos-LMZ8A-R3WXP",
-        @"ramos-ZY38M-XKT7L", @"ramos-OK4MD-KPZ8N", @"ramos-XF3ZQ-KMZ7L", @"ramos-RQ2Z8-KM3LW",
-        @"ramos-WP94L-XUZ3Q", @"ramos-LT72Z-KPZXM", @"ramos-KQX28-MWP9L", @"ramos-BL94M-RX29Q",
-        @"ramos-MXZLP-KTW7R", @"ramos-PU2KX-LZQ5T", @"ramos-OLZ8T-WRX9M", @"ramos-JX72M-LKT94",
-        @"ramos-YX2KQ-MWPZ8", @"ramos-IZ83M-RPXL4", @"ramos-XP7ZK-L93MT", @"ramos-ZU29L-KTWP3",
-        @"ramos-LY48T-RPQZ9", @"ramos-VT39M-LXPQ2", @"ramos-MT93Z-QKWP4", @"ramos-XZ83K-PML7W",
-        @"ramos-QP9ZL-KXW72", @"ramos-WKX28-TY9ML", @"ramos-PLZ93-MTK7Q", @"ramos-KMX29-TWLPQ",
-        @"ramos-JPZ39-LTWKQ", @"ramos-YTZ94-KXPMW", @"ramos-ZPW94-KMX2L", @"ramos-WXM29-LP9KT",
-        @"ramos-9A1BX-7YQ2P", @"ramos-3B4TZ-KP9QW", @"ramos-H8K2L-M3Z9X", @"ramos-2XK3P-Z7L4J",
-        @"ramos-T9Q2W-6M3RK", @"ramos-V8P3X-2KJ4Z", @"ramos-R7M4K-Q2Z9L", @"ramos-N5J9P-LK3T8",
-        @"ramos-Q8L2X-M7P3R", @"ramos-S4K9P-2Z3WQ", @"ramos-Y6P3Z-KL8X2", @"ramos-U2M9K-7Q4LP",
-        @"ramos-C8K3Z-V2Q7P", @"ramos-B7L2X-N9P3K", @"ramos-D9P4K-L2X7Q", @"ramos-F3K7P-Q9L2X",
-        @"ramos-G2L9X-M3P7Q", @"ramos-H4P8K-Z2M9X", @"ramos-J7X3K-P9L2Q", @"ramos-K9P2Z-M7Q3L",
-        @"ramos-L3M9X-Q8P2K", @"ramos-M4K2P-Z7L9X", @"ramos-N8P3X-L2Q7M", @"ramos-P2L7K-Q9M3X",
-        @"ramos-Q3K9P-L7X2M", @"ramos-R4P2X-K9M7L", @"ramos-S8L3K-Q2P9M", @"ramos-T9M4P-L3X2K",
-        @"ramos-U7K2X-P9L3M", @"ramos-V3P9K-L2M7X", @"ramos-W2L8P-Q3K9M", @"ramos-X9M7K-P2L3Q",
-        @"ramos-Y4P3X-K7L9M", @"ramos-Z2K9P-M3L7X", @"ramos-A3L7X-Q9P2M", @"ramos-B9P4K-L3M2X",
-        @"ramos-C7M2P-Q9L3X", @"ramos-D3K9X-P7L2M", @"ramos-E2P7K-L9M3X", @"ramos-F9L3P-Q2K7M",
-        @"ramos-G4M7X-K3P9L", @"ramos-H2P3K-L9X7M", @"ramos-J9K7P-M2L3X", @"ramos-K4P2X-Q7M9L",
-        @"ramos-L9M3K-P7X2Q", @"ramos-M2L7P-K9Q3X", @"ramos-N3P9X-L2M7K", @"ramos-O7K4P-Q9L2M",
-        @"ramos-P9M2X-L3K7Q"
-    ];
-
+    NSArray *keys7d = @[@"ramos-XA12B-BT7YQ", @"ramos-B29TG-NVU92", @"ramos-19CXP-4UEZL"];
     for (NSString *k in keys7d) dict[k] = @7;
     gKeyDatabase = [dict copy];
     return gKeyDatabase;
 }
 
-#pragma mark - Keychain helpers (simples)
+#pragma mark - Keychain helpers
 
 void saveStringToKeychain(NSString *service, NSString *value) {
     if (!service || !value) return;
@@ -106,7 +68,7 @@ NSString * loadStringFromKeychain(NSString *service) {
     return nil;
 }
 
-#pragma mark - Expiration timer helpers
+#pragma mark - Expiration timer
 
 void cancelExpirationTimer(void) {
     if (gExpirationTimer) {
@@ -157,7 +119,7 @@ bool validateKeyOffline(NSString *key, NSString *uuid) {
     return false;
 }
 
-#pragma mark - KeyAuth online validation (license)
+#pragma mark - Online validation
 
 typedef void (^KeyAuthLicenseCompletion)(BOOL success, NSDictionary *json, NSError *err);
 
@@ -174,100 +136,49 @@ void validateKeyOnlineWithKeyAuth(NSString *key, KeyAuthLicenseCompletion comple
     }
     NSString *hwid = getUUID();
     NSString *urlStr = [NSString stringWithFormat:@"%@?type=license&key=%@&name=%@&ownerid=%@&hwid=%@",
-                        kKeyAuthApiBase,
-                        urlEncode(key),
-                        urlEncode(kKeyAuthName),
-                        urlEncode(kKeyAuthOwnerId),
-                        urlEncode(hwid)];
+                        kKeyAuthApiBase, urlEncode(key), urlEncode(kKeyAuthName), urlEncode(kKeyAuthOwnerId), urlEncode(hwid)];
     NSURL *url = [NSURL URLWithString:urlStr];
     NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:url];
     req.HTTPMethod = @"GET";
     req.timeoutInterval = 8.0;
     NSURLSessionDataTask *t = [[NSURLSession sharedSession] dataTaskWithRequest:req completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-        if (error) {
-            if (completion) completion(NO, nil, error);
-            return;
-        }
-        if (!data) {
-            if (completion) completion(NO, nil, [NSError errorWithDomain:@"KeyAuth" code:500 userInfo:@{NSLocalizedDescriptionKey:@"no data"}]);
-            return;
-        }
+        if (error) { if (completion) completion(NO,nil,error); return; }
+        if (!data) { if (completion) completion(NO,nil,[NSError errorWithDomain:@"KeyAuth" code:500 userInfo:@{NSLocalizedDescriptionKey:@"no data"}]); return; }
         NSError *jerr = nil;
         NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jerr];
-        if (jerr) {
-            if (completion) completion(NO, nil, jerr);
-            return;
-        }
+        if (jerr) { if (completion) completion(NO,nil,jerr); return; }
         BOOL success = [json[@"success"] boolValue];
         if (completion) completion(success, json, nil);
     }];
     [t resume];
 }
 
-#pragma mark - Combined validation: online prefer, fallback offline
+#pragma mark - Combined validation
 
 void validateKeyPreferOnline(NSString *inputKey, void (^result)(BOOL ok, NSString *reason)) {
-    if (!inputKey) {
-        if (result) result(NO, @"no_key");
-        return;
-    }
-
-    // Try online first
+    if (!inputKey) { if (result) result(NO, @"no_key"); return; }
     validateKeyOnlineWithKeyAuth(inputKey, ^(BOOL success, NSDictionary *json, NSError *err) {
         if (success) {
-            // Save local metadata and schedule expiration (use server expires if provided)
             NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
             [defaults setObject:inputKey forKey:@"key"];
             [defaults setObject:getUUID() forKey:@"uuid"];
             [defaults setObject:[NSDate date] forKey:[NSString stringWithFormat:@"%@_date", inputKey]];
             [defaults synchronize];
-
-            // If server returned expires inside info.expires parse it (ISO8601)
-            NSString *expiresStr = nil;
-            if ([json isKindOfClass:[NSDictionary class]] && json[@"info"] && [json[@"info"] isKindOfClass:[NSDictionary class]] && json[@"info"][@"expires"]) {
-                expiresStr = json[@"info"][@"expires"];
-            }
-            if (expiresStr) {
-                NSDateFormatter *f = [[NSDateFormatter alloc] init];
-                f.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
-                f.dateFormat = @"yyyy-MM-dd'T'HH:mm:ssZ";
-                NSDate *expireDate = [f dateFromString:expiresStr];
-                if (expireDate) scheduleExpirationTimerForDate(expireDate);
-            } else {
-                // fallback to local key days
-                NSDictionary *dict = loadLocalKeys();
-                if (dict[inputKey]) {
-                    NSInteger daysValid = [dict[inputKey] integerValue];
-                    NSDate *expireDate = [[NSDate date] dateByAddingTimeInterval:(daysValid * 86400)];
-                    scheduleExpirationTimerForDate(expireDate);
-                }
-            }
-
-            // save potential token
             if (json[@"token"]) saveStringToKeychain(@"_remote_token", json[@"token"]);
             if (result) result(YES, @"online_valid");
-            return;
         } else {
-            // if server explicit invalid (no error, success==NO) -> reject immediately
-            if (err == nil && success == NO) {
-                if (result) result(NO, @"online_invalid");
-                return;
-            }
-            // network error -> fallback offline
             BOOL ok = validateKeyOffline(inputKey, getUUID());
             if (result) result(ok, ok?@"offline_valid":@"offline_invalid");
-            return;
         }
     });
 }
 
-#pragma mark - Floating Button (subclass simple)
+#pragma mark - Floating Button
 
 @interface RAMFloatingButton : UIButton
 @end
 
 @implementation RAMFloatingButton
-
 - (instancetype)initWithFrame:(CGRect)frame {
     if (self = [super initWithFrame:frame]) {
         self.clipsToBounds = YES;
@@ -282,7 +193,7 @@ void validateKeyPreferOnline(NSString *inputKey, void (^result)(BOOL ok, NSStrin
 
 - (void)handlePan:(UIPanGestureRecognizer *)g {
     UIWindow *win = self.window;
-    CGPoint trans = [g translationInView:UIScreen.mainScreen.coordinateSpace];
+    CGPoint trans = [g translationInView:g.superview];
     CGPoint center = win.center;
     center.x += trans.x;
     center.y += trans.y;
@@ -294,7 +205,7 @@ void validateKeyPreferOnline(NSString *inputKey, void (^result)(BOOL ok, NSStrin
     center.x = fmax(leftLimit, fmin(center.x, rightLimit));
     center.y = fmax(topLimit, fmin(center.y, bottomLimit));
     win.center = center;
-    [g setTranslation:CGPointZero inView:UIScreen.mainScreen.coordinateSpace];
+    [g setTranslation:CGPointZero inView:g.superview];
 
     if (g.state == UIGestureRecognizerStateEnded) {
         CGFloat threshold = 0.6 * CGRectGetWidth(win.bounds);
@@ -307,7 +218,6 @@ void validateKeyPreferOnline(NSString *inputKey, void (^result)(BOOL ok, NSStrin
 }
 
 - (void)handleTap {
-    // show mini panel
     UIAlertController *mini = [UIAlertController alertControllerWithTitle:@"ramoss4m - discord: tiktok:" message:nil preferredStyle:UIAlertControllerStyleAlert];
     UIAlertAction *discord = [UIAlertAction actionWithTitle:@"Abrir Discord" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         NSURL *u = [NSURL URLWithString:@"https://discord.gg/Qr6fENhzG8"];
@@ -322,11 +232,8 @@ void validateKeyPreferOnline(NSString *inputKey, void (^result)(BOOL ok, NSStrin
         }
     }];
     UIAlertAction *close = [UIAlertAction actionWithTitle:@"Fechar" style:UIAlertActionStyleCancel handler:nil];
-    [mini addAction:discord];
-    [mini addAction:tiktok];
-    [mini addAction:close];
+    [mini addAction:discord]; [mini addAction:tiktok]; [mini addAction:close];
 
-    // present using keyWindow root VC
     dispatch_async(dispatch_get_main_queue(), ^{
         UIWindow *keyW = UIApplication.sharedApplication.keyWindow ?: UIApplication.sharedApplication.windows.firstObject;
         UIViewController *root = keyW.rootViewController;
@@ -335,7 +242,6 @@ void validateKeyPreferOnline(NSString *inputKey, void (^result)(BOOL ok, NSStrin
         [presenting presentViewController:mini animated:YES completion:nil];
     });
 }
-
 @end
 
 #pragma mark - Floating window
@@ -377,47 +283,26 @@ void ensureFloatingExists(void) {
     });
 }
 
-#pragma mark - Prompt for key (bloqueante até validar)
+#pragma mark - Prompt for key
 
 void promptForKey(void);
 
 __attribute__((constructor))
 static void ram_initialize(void) {
-    // prepare local DB
     loadLocalKeys();
-
-    // observe become active to revalidate immediately
-    [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
-                                                      object:nil
-                                                       queue:[NSOperationQueue mainQueue]
-                                                  usingBlock:^(NSNotification * _Nonnull note) {
+    [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
         NSString *curKey = [[NSUserDefaults standardUserDefaults] stringForKey:@"key"];
-        if (!curKey) {
-            promptForKey();
-        } else {
-            // prefer online revalidation
-            validateKeyPreferOnline(curKey, ^(BOOL ok, NSString *reason) {
-                if (!ok) {
-                    promptForKey();
-                }
-            });
-        }
+        if (!curKey) { promptForKey(); } else { validateKeyPreferOnline(curKey, ^(BOOL ok, NSString *reason){ if(!ok) promptForKey(); }); }
         ensureFloatingExists();
     }];
 
-    // startup: show floating and prompt if needed
     dispatch_async(dispatch_get_main_queue(), ^{
         ensureFloatingExists();
         NSString *savedKey = [[NSUserDefaults standardUserDefaults] stringForKey:@"key"];
         NSString *uuid = getUUID();
         if (!savedKey || !validateKeyOffline(savedKey, uuid)) {
-            if (savedKey) {
-                validateKeyPreferOnline(savedKey, ^(BOOL ok, NSString *reason) {
-                    if (!ok) promptForKey();
-                });
-            } else {
-                promptForKey();
-            }
+            if (savedKey) { validateKeyPreferOnline(savedKey, ^(BOOL ok, NSString *reason){ if(!ok) promptForKey(); }); }
+            else { promptForKey(); }
         }
     });
 }
@@ -432,50 +317,28 @@ void promptForKey(void) {
         UIViewController *rootVC = window.rootViewController;
         if (!rootVC) {
             gIsPromptShowing = false;
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                promptForKey();
-            });
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ promptForKey(); });
             return;
         }
 
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"RAMOSS4M FFH4X"
-                                                                       message:@"Insira sua key ou usuário"
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
-            textField.placeholder = @"Sua Key ou usuário (ex: 1)";
-            textField.autocapitalizationType = UITextAutocapitalizationTypeAllCharacters;
-        }];
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"RAMOSS4M FFH4X" message:@"Insira sua key ou usuário" preferredStyle:UIAlertControllerStyleAlert];
+        [alert addTextFieldWithConfigurationHandler:^(UITextField *textField){ textField.placeholder = @"Sua Key ou usuário (ex: 1)"; textField.autocapitalizationType = UITextAutocapitalizationTypeAllCharacters; }];
 
-        __weak UIAlertController *weakAlert = alert;
-        UIAlertAction *confirm = [UIAlertAction actionWithTitle:@"Verificar" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-            UIAlertController *strong = weakAlert;
-            NSString *input = strong.textFields.firstObject.text;
-            if (!input || input.length == 0) {
-                gIsPromptShowing = false;
-                promptForKey();
-                return;
-            }
-            // prefer online -> fallback offline
-            validateKeyPreferOnline(input, ^(BOOL ok, NSString *reason) {
+        UIAlertAction *confirm = [UIAlertAction actionWithTitle:@"Verificar" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){
+            NSString *input = alert.textFields.firstObject.text;
+            if (!input || input.length==0) { gIsPromptShowing=false; promptForKey(); return; }
+            validateKeyPreferOnline(input, ^(BOOL ok, NSString *reason){
                 dispatch_async(dispatch_get_main_queue(), ^{
-                    if (ok) {
-                        gIsPromptShowing = false;
-                        // success: do nothing else, floating stays
-                    } else {
-                        gIsPromptShowing = false;
-                        // invalid -> re-prompt
-                        promptForKey();
-                    }
+                    gIsPromptShowing=false;
+                    if(!ok) promptForKey();
                 });
             });
         }];
 
-        UIAlertAction *discordAction = [UIAlertAction actionWithTitle:@"Discord" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        UIAlertAction *discordAction = [UIAlertAction actionWithTitle:@"Discord" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action){
             NSURL *discordURL = [NSURL URLWithString:@"https://discord.gg/Qr6fENhzG8"];
-            if ([[UIApplication sharedApplication] canOpenURL:discordURL]) {
-                [[UIApplication sharedApplication] openURL:discordURL options:@{} completionHandler:nil];
-            }
-            gIsPromptShowing = false;
+            if ([[UIApplication sharedApplication] canOpenURL:discordURL]) [[UIApplication sharedApplication] openURL:discordURL options:@{} completionHandler:nil];
+            gIsPromptShowing=false;
         }];
 
         [alert addAction:discordAction];
