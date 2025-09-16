@@ -296,11 +296,37 @@ void validateKeyPreferOnline(NSString *inputKey, void (^result)(BOOL ok, NSStrin
 }
 
 - (void)handleTap {
-    UIAlertController *mini = [UIAlertController alertControllerWithTitle:@"ramoss4m - discord: tiktok:" message:nil preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *discord = [UIAlertAction actionWithTitle:@"Abrir Discord" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        NSURL *u = [NSURL URLWithString:@"https://discord.gg/Qr6fENhzG8"];
-        if ([[UIApplication sharedApplication] canOpenURL:u]) {
-            [[UIApplication sharedApplication] openURL:u options:@{} completionHandler:nil];
+    UIAlertController *mini = [UIAlertController alertControllerWithTitle:@"ramoss4m"
+                                                                   message:nil
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    UIAlertAction *discord = [UIAlertAction actionWithTitle:@"Abrir Discord"
+                                                      style:UIAlertActionStyleDefault
+                                                    handler:^(UIAlertAction * _Nonnull action) {
+        NSURL *url = [NSURL URLWithString:@"https://discord.gg/Qr6fENhzG8"];
+        if ([[UIApplication sharedApplication] canOpenURL:url]) {
+            [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
         }
     }];
-    UIAlertAction *tiktok = [UIAlert
+    
+    UIAlertAction *tiktok = [UIAlertAction actionWithTitle:@"Abrir TikTok"
+                                                     style:UIAlertActionStyleDefault
+                                                   handler:^(UIAlertAction * _Nonnull action) {
+        NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@ramoss4m"];
+        if ([[UIApplication sharedApplication] canOpenURL:url]) {
+            [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
+        }
+    }];
+    
+    UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"Fechar"
+                                                     style:UIAlertActionStyleCancel
+                                                   handler:nil];
+    
+    [mini addAction:discord];
+    [mini addAction:tiktok];
+    [mini addAction:cancel];
+    
+    UIViewController *rootVC = UIApplication.sharedApplication.keyWindow.rootViewController;
+    [rootVC presentViewController:mini animated:YES completion:nil];
+}
+@end
