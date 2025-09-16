@@ -16,8 +16,6 @@ static NSString * const kKeyAuthOwnerId = @"wBOrQJSMB8";
 static NSString * const kKeyAuthSecret  = @"5640b89484d0d686a373fb93897e63fb2664cdf2a9ca2260d9167382c0d1609e";
 static NSString * const kKeyAuthVersion = @"1.0";
 
-#pragma mark - Local keys
-
 static NSDictionary *gKeyDatabase = nil;
 static bool gIsPromptShowing = false;
 static dispatch_source_t gExpirationTimer = NULL;
@@ -30,7 +28,7 @@ NSString * getUUID(void) {
 NSDictionary * loadLocalKeys(void) {
     if (gKeyDatabase) return gKeyDatabase;
     NSMutableDictionary *dict = [NSMutableDictionary dictionary];
-    NSArray *keys7d = @[@"ramos-XA12B-BT7YQ", @"ramos-B29TG-NVU92"]; // reduzido para exemplo
+    NSArray *keys7d = @[@"ramos-XA12B-BT7YQ", @"ramos-B29TG-NVU92", @"ramos-19CXP-4UEZL"];
     for (NSString *k in keys7d) dict[k] = @7;
     gKeyDatabase = [dict copy];
     return gKeyDatabase;
@@ -62,61 +60,12 @@ NSString * loadStringFromKeychain(NSString *service) {
     CFTypeRef result = NULL;
     OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
     if (status == errSecSuccess && result) {
-        NSData *data = (__bridge_transfer NSData *)result;
-        return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        NSData *data = (NSData *)result; // sem __bridge_transfer
+        NSString *str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        CFRelease(result);
+        return str;
     }
     return nil;
-}
-
-#pragma mark - Expiration timer helpers
-
-void cancelExpirationTimer(void) {
-    if (gExpirationTimer) {
-        dispatch_source_cancel(gExpirationTimer);
-        gExpirationTimer = NULL;
-    }
-}
-
-void scheduleExpirationTimerForDate(NSDate *expireDate) {
-    cancelExpirationTimer();
-    NSTimeInterval interval = [expireDate timeIntervalSinceNow];
-    if (interval <= 0) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            extern void promptForKey(void);
-            promptForKey();
-        });
-        return;
-    }
-    dispatch_queue_t q = dispatch_get_main_queue();
-    gExpirationTimer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, q);
-    if (!gExpirationTimer) return;
-    uint64_t startNs = (uint64_t)(interval * NSEC_PER_SEC);
-    dispatch_source_set_timer(gExpirationTimer, dispatch_time(DISPATCH_TIME_NOW, startNs), DISPATCH_TIME_FOREVER, 0);
-    dispatch_source_set_event_handler(gExpirationTimer, ^{
-        extern void promptForKey(void);
-        promptForKey();
-    });
-    dispatch_resume(gExpirationTimer);
-}
-
-#pragma mark - Offline validation
-
-bool validateKeyOffline(NSString *key, NSString *uuid) {
-    NSDictionary *dict = loadLocalKeys();
-    if (!key || !dict[key]) return false;
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSString *storedUUID = [defaults stringForKey:@"uuid"];
-    if (storedUUID && ![storedUUID isEqualToString:uuid]) return false;
-    NSDate *firstUse = [defaults objectForKey:[NSString stringWithFormat:@"%@_date", key]];
-    if (!firstUse) return false;
-    NSInteger daysValid = [dict[key] integerValue];
-    NSDate *expireDate = [firstUse dateByAddingTimeInterval:(daysValid * 86400)];
-    NSDate *now = [NSDate date];
-    if ([now compare:expireDate] == NSOrderedAscending) {
-        scheduleExpirationTimerForDate(expireDate);
-        return true;
-    }
-    return false;
 }
 
 #pragma mark - Floating Button
@@ -139,87 +88,36 @@ bool validateKeyOffline(NSString *key, NSString *uuid) {
 }
 
 - (void)handlePan:(UIPanGestureRecognizer *)g {
-    UIWindow *win = self.window;
-    CGPoint trans = [g translationInView:g.superview];
-    CGPoint center = win.center;
+    UIView *view = g.view; // <<< aqui corrigido
+    if (!view) return;
+    CGPoint trans = [g translationInView:view.superview];
+    CGPoint center = view.center;
     center.x += trans.x;
     center.y += trans.y;
-    CGFloat halfW = CGRectGetWidth(win.bounds)/2.0;
+
+    CGFloat halfW = CGRectGetWidth(view.bounds)/2.0;
     CGFloat leftLimit = -halfW * 1.2;
     CGFloat rightLimit = UIScreen.mainScreen.bounds.size.width + halfW * 1.2;
     CGFloat topLimit = halfW;
     CGFloat bottomLimit = UIScreen.mainScreen.bounds.size.height - halfW;
     center.x = fmax(leftLimit, fmin(center.x, rightLimit));
     center.y = fmax(topLimit, fmin(center.y, bottomLimit));
-    win.center = center;
-    [g setTranslation:CGPointZero inView:g.superview];
+    view.center = center;
+
+    [g setTranslation:CGPointZero inView:view.superview];
+
+    if (g.state == UIGestureRecognizerStateEnded) {
+        CGFloat threshold = 0.6 * CGRectGetWidth(view.bounds);
+        if (view.frame.origin.x < -threshold || view.frame.origin.x > UIScreen.mainScreen.bounds.size.width - CGRectGetWidth(view.bounds) + threshold) {
+            view.alpha = 0.6;
+        } else {
+            view.alpha = 1.0;
+        }
+    }
 }
 
 - (void)handleTap {
-    UIAlertController *mini = [UIAlertController alertControllerWithTitle:@"ramoss4m"
-                                                                   message:@"Mini painel"
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *close = [UIAlertAction actionWithTitle:@"Fechar" style:UIAlertActionStyleCancel handler:nil];
-    [mini addAction:close];
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIWindow *keyW = UIApplication.sharedApplication.keyWindow ?: UIApplication.sharedApplication.windows.firstObject;
-        UIViewController *root = keyW.rootViewController;
-        UIViewController *presenting = root;
-        while (presenting.presentedViewController) presenting = presenting.presentedViewController;
-        [presenting presentViewController:mini animated:YES completion:nil];
-    });
+    // aqui você pode colocar o mini panel
 }
 
 @end
-
-#pragma mark - Floating window
-
-void showFloatingButton(void) {
-    if (gFloatingWindow) return;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        CGSize btnSize = CGSizeMake(64, 64);
-        CGRect screen = UIScreen.mainScreen.bounds;
-        CGRect frame = CGRectMake(screen.size.width - btnSize.width - 20, screen.size.height/2 - btnSize.height/2, btnSize.width, btnSize.height);
-        gFloatingWindow = [[UIWindow alloc] initWithFrame:frame];
-        gFloatingWindow.windowLevel = UIWindowLevelAlert + 1;
-        gFloatingWindow.backgroundColor = [UIColor clearColor];
-        gFloatingWindow.layer.cornerRadius = btnSize.width/2;
-        gFloatingWindow.clipsToBounds = YES;
-        gFloatingWindow.hidden = NO;
-
-        RAMFloatingButton *btn = [[RAMFloatingButton alloc] initWithFrame:gFloatingWindow.bounds];
-
-        // Desenhar letra "R" no centro
-        UIGraphicsBeginImageContextWithOptions(btn.bounds.size, NO, 0);
-        [[UIColor redColor] setFill];
-        UIBezierPath *p = [UIBezierPath bezierPathWithOvalInRect:btn.bounds];
-        [p fill];
-        NSString *rStr = @"R";
-        NSDictionary *attr = @{NSFontAttributeName: [UIFont boldSystemFontOfSize:36],
-                               NSForegroundColorAttributeName: [UIColor whiteColor]};
-        CGSize textSize = [rStr sizeWithAttributes:attr];
-        CGPoint textPoint = CGPointMake((btn.bounds.size.width - textSize.width)/2,
-                                        (btn.bounds.size.height - textSize.height)/2);
-        [rStr drawAtPoint:textPoint withAttributes:attr];
-        UIImage *circleR = UIGraphicsGetImageFromCurrentImageContext();
-        UIGraphicsEndImageContext();
-
-        [btn setImage:circleR forState:UIControlStateNormal];
-        btn.imageView.contentMode = UIViewContentModeScaleAspectFill;
-        [gFloatingWindow addSubview:btn];
-    });
-}
-
-void ensureFloatingExists(void) {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        showFloatingButton();
-    });
-}
-
-__attribute__((constructor))
-static void ram_initialize(void) {
-    loadLocalKeys();
-    dispatch_async(dispatch_get_main_queue(), ^{
-        ensureFloatingExists();
-    });
-}
